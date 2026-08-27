@@ -1,102 +1,250 @@
-import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
-import styles from "./page.module.css";
+"use client";
 
-type Props = Omit<ImageProps, "src"> & {
-  srcLight: string;
-  srcDark: string;
-};
+import { useEffect, useRef, useState } from "react";
 
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
-
-  return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
+type Point = {
+  x: number;
+  y: number;
 };
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <ThemeImage
-          className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
-          alt="Turborepo logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>apps/web/app/page.tsx</code>
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const lastPoint = useRef<Point | null>(null);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new/clone?demo-description=Learn+to+implement+a+monorepo+with+a+two+Next.js+sites+that+has+installed+three+local+packages.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F4K8ZISWAzJ8X1504ca0zmC%2F0b21a1c6246add355e55816278ef54bc%2FBasic.png&demo-title=Monorepo+with+Turborepo&demo-url=https%3A%2F%2Fexamples-basic-web.vercel.sh%2F&from=templates&project-name=Monorepo+with+Turborepo&repository-name=monorepo-turborepo&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo%2Ftree%2Fmain%2Fexamples%2Fbasic&root-directory=apps%2Fdocs&skippable-integrations=1&teamSlug=vercel&utm_source=create-turbo"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://turborepo.dev/docs?utm_source"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+  const [connected, setConnected] = useState(false);
+
+  // -----------------------------
+  // WebSocket connection
+  // -----------------------------
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8080");
+
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+
+      setConnected(true);
+
+      ws.send(
+        JSON.stringify({
+          type: "join-room",
+          roomId: "my-first-room",
+        })
+      );
+    };
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      console.log("Received:", message);
+
+      if (message.type === "draw") {
+        drawLine(
+          message.data.from,
+          message.data.to
+        );
+      }
+    };
+
+    ws.onerror = () => {
+      console.log("WebSocket error");
+    };
+
+    ws.onclose = () => {
+      console.log("WebSocket disconnected");
+
+      setConnected(false);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  // -----------------------------
+  // Get mouse position
+  // -----------------------------
+
+  const getPosition = (
+    event: React.MouseEvent<HTMLCanvasElement>
+  ): Point => {
+    const canvas = canvasRef.current!;
+
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  };
+
+  // -----------------------------
+  // Draw line
+  // -----------------------------
+
+  const drawLine = (
+    from: Point,
+    to: Point
+  ) => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) return;
+
+    ctx.beginPath();
+
+    ctx.moveTo(from.x, from.y);
+
+    ctx.lineTo(to.x, to.y);
+
+    ctx.strokeStyle = "black";
+
+    ctx.lineWidth = 3;
+
+    ctx.lineCap = "round";
+
+    ctx.stroke();
+  };
+
+  // -----------------------------
+  // Mouse down
+  // -----------------------------
+
+  const handleMouseDown = (
+    event: React.MouseEvent<HTMLCanvasElement>
+  ) => {
+    drawing.current = true;
+
+    const point = getPosition(event);
+
+    lastPoint.current = point;
+
+    console.log("Started drawing");
+  };
+
+  // -----------------------------
+  // Mouse move
+  // -----------------------------
+
+  const handleMouseMove = (
+    event: React.MouseEvent<HTMLCanvasElement>
+  ) => {
+    if (!drawing.current) return;
+
+    const currentPoint = getPosition(event);
+
+    const previousPoint = lastPoint.current;
+
+    if (!previousPoint) return;
+
+    // Draw locally
+    drawLine(
+      previousPoint,
+      currentPoint
+    );
+
+    // Send drawing to WebSocket
+    if (
+      wsRef.current &&
+      wsRef.current.readyState === WebSocket.OPEN
+    ) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "draw",
+
+          data: {
+            from: previousPoint,
+            to: currentPoint,
+          },
+        })
+      );
+    }
+
+    lastPoint.current = currentPoint;
+  };
+
+  // -----------------------------
+  // Mouse up
+  // -----------------------------
+
+  const handleMouseUp = () => {
+    drawing.current = false;
+
+    lastPoint.current = null;
+
+    console.log("Stopped drawing");
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#222",
+        padding: "40px",
+      }}
+    >
+
+      {/* Header */}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+
+        <h1
+          style={{
+            color: "white",
+            fontSize: "30px",
+          }}
+        >
+          Excalidraw Clone
+        </h1>
+
+        <div
+          style={{
+            color: connected
+              ? "#22c55e"
+              : "#ef4444",
+            fontSize: "18px",
+          }}
+        >
+          WebSocket:{" "}
+          {connected
+            ? "Connected ✅"
+            : "Disconnected ❌"}
         </div>
-        <Button appName="web" className={styles.secondary}>
-          Open alert
-        </Button>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com/templates?search=turborepo&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://turborepo.dev?utm_source=create-turbo"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to turborepo.dev →
-        </a>
-      </footer>
+
+      </div>
+
+      {/* Canvas */}
+
+      <canvas
+        ref={canvasRef}
+        width={2000}
+        height={1000}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{
+          display: "block",
+          background: "white",
+          border: "3px solid red",
+          cursor: "crosshair",
+        }}
+      />
+
     </div>
   );
 }
