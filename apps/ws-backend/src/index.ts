@@ -27,6 +27,10 @@ console.log("WebSocket server running on port 8080");
 wss.on("connection", (ws: WebSocket) => {
   console.log("Client connected");
 
+  ws.on("error", (error) => {
+    console.error("WS CLIENT ERROR:", error);
+  });
+
   let currentRoom: string | null = null;
 
   ws.on("message", async (message) => {
