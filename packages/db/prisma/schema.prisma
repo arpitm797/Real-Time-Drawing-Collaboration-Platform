@@ -16,9 +16,23 @@ model User {
 }
 
 model Room {
-  id        Int      @id @default(autoincrement())
-  slug      String   @unique
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
   adminId   Int
-  admin     User     @relation(fields: [adminId], references: [id])
+  admin     User      @relation(fields: [adminId], references: [id])
+  drawings  Drawing[]
+  createdAt DateTime  @default(now())
+}
+
+model Drawing {
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  fromX     Float
+  fromY     Float
+  toX       Float
+  toY       Float
+
   createdAt DateTime @default(now())
 }

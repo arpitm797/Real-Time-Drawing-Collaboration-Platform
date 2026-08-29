@@ -1,250 +1,112 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
-type Point = {
-  x: number;
-  y: number;
-};
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const lastPoint = useRef<Point | null>(null);
+  const router = useRouter();
 
-  const [connected, setConnected] = useState(false);
-
-  // -----------------------------
-  // WebSocket connection
-  // -----------------------------
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080");
+    const token = localStorage.getItem("token");
 
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("WebSocket connected");
-
-      setConnected(true);
-
-      ws.send(
-        JSON.stringify({
-          type: "join-room",
-          roomId: "my-first-room",
-        })
-      );
-    };
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-
-      console.log("Received:", message);
-
-      if (message.type === "draw") {
-        drawLine(
-          message.data.from,
-          message.data.to
-        );
-      }
-    };
-
-    ws.onerror = () => {
-      console.log("WebSocket error");
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket disconnected");
-
-      setConnected(false);
-    };
-
-    return () => {
-      ws.close();
-    };
+    setLoggedIn(!!token);
   }, []);
 
-  // -----------------------------
-  // Get mouse position
-  // -----------------------------
-
-  const getPosition = (
-    event: React.MouseEvent<HTMLCanvasElement>
-  ): Point => {
-    const canvas = canvasRef.current!;
-
-    const rect = canvas.getBoundingClientRect();
-
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
+  const logout = () => {
+    localStorage.removeItem("token");
+    setLoggedIn(false);
   };
 
-  // -----------------------------
-  // Draw line
-  // -----------------------------
+  const createRoom = async () => {
+    const token = localStorage.getItem("token");
 
-  const drawLine = (
-    from: Point,
-    to: Point
-  ) => {
-    const canvas = canvasRef.current;
-
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-
-    if (!ctx) return;
-
-    ctx.beginPath();
-
-    ctx.moveTo(from.x, from.y);
-
-    ctx.lineTo(to.x, to.y);
-
-    ctx.strokeStyle = "black";
-
-    ctx.lineWidth = 3;
-
-    ctx.lineCap = "round";
-
-    ctx.stroke();
-  };
-
-  // -----------------------------
-  // Mouse down
-  // -----------------------------
-
-  const handleMouseDown = (
-    event: React.MouseEvent<HTMLCanvasElement>
-  ) => {
-    drawing.current = true;
-
-    const point = getPosition(event);
-
-    lastPoint.current = point;
-
-    console.log("Started drawing");
-  };
-
-  // -----------------------------
-  // Mouse move
-  // -----------------------------
-
-  const handleMouseMove = (
-    event: React.MouseEvent<HTMLCanvasElement>
-  ) => {
-    if (!drawing.current) return;
-
-    const currentPoint = getPosition(event);
-
-    const previousPoint = lastPoint.current;
-
-    if (!previousPoint) return;
-
-    // Draw locally
-    drawLine(
-      previousPoint,
-      currentPoint
-    );
-
-    // Send drawing to WebSocket
-    if (
-      wsRef.current &&
-      wsRef.current.readyState === WebSocket.OPEN
-    ) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "draw",
-
-          data: {
-            from: previousPoint,
-            to: currentPoint,
-          },
-        })
-      );
+    if (!token) {
+      router.push("/signin");
+      return;
     }
 
-    lastPoint.current = currentPoint;
+    try {
+      const slug = Math.random()
+        .toString(36)
+        .substring(2, 10);
+
+      const response = await fetch(
+        "http://localhost:3001/api/v1/room",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            slug,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("Room response:", data);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("token");
+          setLoggedIn(false);
+          router.push("/signin");
+          return;
+        }
+
+        console.error("Create room failed:", data);
+        return;
+      }
+
+      router.push(`/room/${data.room.slug}`);
+    } catch (error) {
+      console.error("Create room error:", error);
+    }
   };
 
-  // -----------------------------
-  // Mouse up
-  // -----------------------------
-
-  const handleMouseUp = () => {
-    drawing.current = false;
-
-    lastPoint.current = null;
-
-    console.log("Stopped drawing");
-  };
+  // Don't show buttons until we know login state
+  if (loggedIn === null) {
+    return null;
+  }
 
   return (
-    <div
+    <main
       style={{
         minHeight: "100vh",
-        background: "#222",
-        padding: "40px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "20px",
       }}
     >
+      <h1>Excalidraw Clone</h1>
 
-      {/* Header */}
+      {loggedIn ? (
+        <>
+          <button onClick={createRoom}>
+            Create Room
+          </button>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
+          <button onClick={logout}>
+            Logout
+          </button>
+        </>
+      ) : (
+        <>
+          <button onClick={() => router.push("/signin")}>
+            Sign In
+          </button>
 
-        <h1
-          style={{
-            color: "white",
-            fontSize: "30px",
-          }}
-        >
-          Excalidraw Clone
-        </h1>
-
-        <div
-          style={{
-            color: connected
-              ? "#22c55e"
-              : "#ef4444",
-            fontSize: "18px",
-          }}
-        >
-          WebSocket:{" "}
-          {connected
-            ? "Connected ✅"
-            : "Disconnected ❌"}
-        </div>
-
-      </div>
-
-      {/* Canvas */}
-
-      <canvas
-        ref={canvasRef}
-        width={2000}
-        height={1000}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        style={{
-          display: "block",
-          background: "white",
-          border: "3px solid red",
-          cursor: "crosshair",
-        }}
-      />
-
-    </div>
+          <button onClick={() => router.push("/signup")}>
+            Sign Up
+          </button>
+        </>
+      )}
+    </main>
   );
 }

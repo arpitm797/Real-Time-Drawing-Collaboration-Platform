@@ -106,25 +106,25 @@ importers:
 
   apps/ws-backend:
     dependencies:
-      express:
-        specifier: ^5.2.1
-        version: 5.2.1
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       ws:
-        specifier: ^8.21.3
+        specifier: ^8.18.0
         version: 8.21.3
     devDependencies:
-      '@repo/typescript-config':
+      '@repo/eslint-config':
         specifier: workspace:*
-        version: link:../../packages/typescript-config
-      '@types/express':
-        specifier: ^5.0.6
-        version: 5.0.6
+        version: link:../../packages/eslint-config
       '@types/ws':
-        specifier: ^8.18.1
+        specifier: ^8.5.13
         version: 8.18.1
       tsx:
-        specifier: ^4.23.12
+        specifier: ^4.19.0
         version: 4.23.12
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.2
 
   packages/db:
     dependencies:
@@ -2903,6 +2903,7 @@ packages:
   typescript@5.9.2:
     resolution: {integrity: sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==}
     engines: {node: '>=14.17'}
+    hasBin: true
 
   typescript@7.0.2:
     resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
