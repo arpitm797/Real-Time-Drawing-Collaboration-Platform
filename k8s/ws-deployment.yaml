@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whiteboard-ws
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whiteboard-ws
+  template:
+    metadata:
+      labels:
+        app: whiteboard-ws
+    spec:
+      containers:
+        - name: ws-backend
+          image: whiteboard-ws:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: whiteboard-secrets
+                  key: DATABASE_URL

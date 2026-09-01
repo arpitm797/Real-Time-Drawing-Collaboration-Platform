@@ -25,7 +25,7 @@ export const authMiddleware = (
 
         const decode = jwt.verify(
             token,
-            process.env.Jwt_SECRET as string) as {userId? : number};
+            process.env.JWt_SECRET as string) as {userId? : number};
         
             req.userId = decode.userId;
 

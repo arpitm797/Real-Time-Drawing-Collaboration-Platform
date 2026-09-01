@@ -4,9 +4,9 @@
   "description": "",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc -b",
-    "dev": "tsc -b --watch"
-  },
+  "build": "prisma generate && tsc -b",
+  "dev": "tsc -b --watch"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
