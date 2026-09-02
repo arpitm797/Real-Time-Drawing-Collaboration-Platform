@@ -1,10 +1,11 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { prisma } from "@repo/db";
 
-const wss = new WebSocketServer({
-  port: 8080,
-});
+const PORT = Number(process.env.PORT) || 8080;
 
+const wss = new WebSocketServer({
+  port: PORT,
+});
 type Point = {
   x: number;
   y: number;
@@ -22,7 +23,7 @@ type Room = {
 
 const rooms = new Map<string, Room>();
 
-console.log("WebSocket server running on port 8080");
+console.log(`WebSocket server running on port ${PORT}`);
 
 wss.on("connection", (ws: WebSocket) => {
   console.log("Client connected");
@@ -97,7 +98,7 @@ wss.on("connection", (ws: WebSocket) => {
           return;
         }
 
-        const drawings: DrawData[] = dbRoom.drawings.map((drawing) => ({
+        const drawings: DrawData[] = dbRoom.drawings.map((drawing:any) => ({
           from: {
             x: drawing.fromX,
             y: drawing.fromY,
