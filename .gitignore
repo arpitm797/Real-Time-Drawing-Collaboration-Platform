@@ -5,6 +5,7 @@ node_modules/
 .env
 .env.*
 .env.docker
+.env.local
 
 # Build output
 dist/

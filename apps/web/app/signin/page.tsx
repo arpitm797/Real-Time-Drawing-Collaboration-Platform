@@ -15,7 +15,7 @@ export default function Signin() {
 
     try {
       const response = await fetch(
-        "http://localhost:3001/api/v1/signin",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/signin`,
         {
           method: "POST",
           headers: {

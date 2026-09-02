@@ -1216,7 +1216,7 @@ export default function RoomPage() {
 
     const ws =
       new WebSocket(
-        "ws://localhost:8080"
+        process.env.NEXT_PUBLIC_WS_URL!
       );
 
     wsRef.current = ws;

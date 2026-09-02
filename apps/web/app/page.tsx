@@ -33,7 +33,7 @@ export default function Home() {
         .substring(2, 10);
 
       const response = await fetch(
-        "http://localhost:3001/api/v1/room",
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/room`,
         {
           method: "POST",
           headers: {
