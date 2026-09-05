@@ -163,7 +163,6 @@ export default function RoomPage() {
     renderCanvas();
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   function removeDrawing(id: string) {
     drawingsRef.current = drawingsRef.current.filter(
       (drawing) => drawing.id !== id
@@ -186,7 +185,6 @@ export default function RoomPage() {
     renderCanvas();
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   function undo() {
     if (historyRef.current.length === 0) return;
 
@@ -206,7 +204,6 @@ export default function RoomPage() {
     renderCanvas();
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   function redo() {
     if (redoRef.current.length === 0) return;
 
@@ -497,7 +494,6 @@ export default function RoomPage() {
     ctx.restore();
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   function renderCanvas() {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -871,7 +867,7 @@ export default function RoomPage() {
     return () => {
       resizeObserver.disconnect();
     };
-  }, [renderCanvas]);
+  }, []);
 
   useEffect(() => {
     const ws = new WebSocket(WS_URL);
@@ -933,7 +929,7 @@ export default function RoomPage() {
       ws.close();
       wsRef.current = null;
     };
-  }, [removeDrawing, renderCanvas, roomId]);
+  }, [roomId]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -973,7 +969,7 @@ export default function RoomPage() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [redo, undo]);
+  }, []);
 
   const tools: { name: Tool; label: string; icon: string }[] = [
     { name: "select", label: "Pan", icon: "✋" },
